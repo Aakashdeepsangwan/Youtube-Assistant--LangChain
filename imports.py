@@ -1,28 +1,26 @@
-# from langchain.document_loaders import YoutubeLoader - it's depreciated
 from langchain_community.document_loaders import YoutubeLoader
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-# Optional imports (not needed for vector_db_youtube function)
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+
 from langchain_anthropic import ChatAnthropic
-from langchain.prompts import PromptTemplate
-from langchain.chains import LLMChain
+from langchain_core.prompts import PromptTemplate
+from langchain_classic.chains import LLMChain
+
 
 # For embeddings - using Hugging Face (free)
 from langchain_huggingface import HuggingFaceEmbeddings
 
 # For vector database we will use FAISS 
-# from langchain.vectorstores import FAISS - deprecated
 from langchain_community.vectorstores import FAISS
 from dotenv import load_dotenv
+import os
 from sympy.utilities.iterables import kbins
 
 # load dotenv - to use the API storeed in .env
 load_dotenv()
 
-# Initialize Hugging Face embeddings (free, runs locally)
-# You can use different models like:
+
+# can use different models like:
 # - "sentence-transformers/all-MiniLM-L6-v2" (default, fast and lightweight)
-# - "sentence-transformers/all-mpnet-base-v2" (better quality, slower)
-# - "sentence-transformers/paraphrase-MiniLM-L6-v2" (good for semantic similarity)
 embeddings = HuggingFaceEmbeddings(
     model_name="sentence-transformers/all-MiniLM-L6-v2"
 )
@@ -30,9 +28,6 @@ embeddings = HuggingFaceEmbeddings(
 video_url = "https://www.youtube.com/watch?v=qAF1NjEVHhY&list=WL"
 
 def vector_db_youtube(video_url : str, language: list = ["en-US", "en"])->FAISS:
-    # this is basic loading command -> same used for pdf's word docs
-    # Specify language codes - try en-US first (common for US videos), then fallback to en
-    # YoutubeLoader accepts language as a list or string
     loader = YoutubeLoader.from_youtube_url(video_url, language=language)
     transcript = loader.load()
 
@@ -58,33 +53,54 @@ def get_response_from_query(db, query,k=4):
 
     # 1) LLM Template
     llm = ChatAnthropic(
-        model = "claude-3-haiku-20240307" 
+        model = "claude-3-haiku-20240307",
+        api_key = os.getenv("claudeAPI") 
     )
 
     # 2) Prompt Template
     prompt = PromptTemplate(
         input_variables = ["question", "docs"],
         template = 
-        """  
-        Your are a helpful Youtube Assistant that can answer questuons about videos
-        Based on the video transcript
+        """You are a helpful Youtube Assistant that can answer questions about videos based on the video transcript.
 
-        Answer the following question : {question}
-        By searching the following video transcrit : {docs}
+Question: {question}
 
-        Only use the fuctual information from the transcript to answer the question
+Video Transcript:
+{docs}
 
-        If you don't have enough information to answer this question,
-        say "I don't know"
+Instructions:
+1. Answer the question using ONLY factual information from the transcript provided above.
+2. Keep your answer CONCISE and well-structured:
+   - Start with a brief introduction (1-2 sentences maximum)
+   - Use bullet points (•) for main points, with each bullet on a NEW LINE
+   - Add a blank line after each bullet point for readability
+   - Add a blank line between different paragraphs or sections
+   - Keep bullet point content brief (1-2 sentences per bullet)
+3. Formatting requirements:
+   - Each bullet point must be on its own line
+   - Add a blank line after each bullet point
+   - Add a blank line between paragraphs
+   - Use proper spacing throughout
+4. If the transcript doesn't contain enough information to answer the question, say "I don't have enough information from the video transcript to answer this question."
+5. Be concise - avoid long paragraphs. Use bullet points whenever possible.
 
-        Your answer should be detailed.
+IMPORTANT: Format your response with proper line breaks. Each bullet point should be on a new line, followed by a blank line. Separate paragraphs with blank lines.
         """
     )
     
 
     chain = LLMChain(llm= llm, prompt = prompt)
     response = chain.run(question= query, docs = docs_page_content)
-    response = response.replace("\n", "")
+    # Preserve formatting: keep line breaks and spacing
+    # Only clean up excessive whitespace while preserving intentional line breaks
+    lines = response.split("\n")
+    cleaned_lines = []
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        # Keep the line if it has content, or if it's an intentional blank line (between paragraphs)
+        if stripped or (i > 0 and i < len(lines) - 1 and lines[i-1].strip() and lines[i+1].strip()):
+            cleaned_lines.append(stripped if stripped else "")
+    response = "\n".join(cleaned_lines)
     return response, docs
 
 

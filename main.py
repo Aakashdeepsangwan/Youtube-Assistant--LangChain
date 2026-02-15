@@ -1,6 +1,5 @@
 import streamlit as st
 import imports as lch
-import textwrap # we don't need to scroll the page
 
 st.title("Youtube Assistant")
 
@@ -17,14 +16,21 @@ with st.sidebar :
             key = "query"
         )
         
-        submit_button = st.form_submit_button(label = "submit")
+        submit_button = st.form_submit_button(label="Submit")
 
-if query and youtube_url :
-    db = lch.vector_db_youtube(youtube_url)
-    response, docs = lch.get_response_from_query(db,query)
-    st.text (textwrap.fill(response, width=80))
+if submit_button:
+    if query and youtube_url:
+        try:
+            with st.spinner("Processing video and generating response..."):
+                db = lch.vector_db_youtube(youtube_url)
+                response, docs = lch.get_response_from_query(db, query)
+                st.success("Response generated!")
+                st.markdown(response)
+        except Exception as e:
+            st.error(f"An error occurred: {str(e)}")
+    else:
+        st.warning("Please provide both a YouTube URL and a question.")
 
 
     
-
 

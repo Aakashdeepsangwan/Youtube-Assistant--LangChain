@@ -1,0 +1,12 @@
+langchain
+langchain-core
+langchain-community
+langchain-anthropic
+langchain-huggingface
+langchain-classic
+faiss-cpu
+chromadb
+sentence-transformers
+python-dotenv
+streamlit
+youtube-transcript-api

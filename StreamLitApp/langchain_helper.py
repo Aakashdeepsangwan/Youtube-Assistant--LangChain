@@ -3,6 +3,7 @@ from langchain_anthropic import ChatAnthropic
 from dotenv import load_dotenv
 from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain # helps to put differnt LLM components together
+import os
 
 
 # Load environment variables
@@ -26,7 +27,8 @@ in 1.0. Use :meth:`~invoke` instead.
 def generate_pet_name(animal_type, pet_color) :
     llm = ChatAnthropic(
         model = "claude-3-haiku-20240307",
-        temperature= 0.9)
+        temperature= 0.9,
+        api_key = os.getenv("claudeAPI") or os.getenv("ANTHROPIC_API_KEY"))
 
     """ we can create a prompt template so we don't have keep asking differnt prompt everytime"""
     prompt_template = PromptTemplate(

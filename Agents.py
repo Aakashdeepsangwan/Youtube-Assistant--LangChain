@@ -3,6 +3,7 @@ from langchain_anthropic import ChatAnthropic # LLMS
 from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
 from dotenv import load_dotenv
+import os
 
 # usings agents
 from langchain.agents import load_tools
@@ -13,9 +14,11 @@ from langchain.agents import AgentType
 load_dotenv()
 
 def langchain_agent() :
+    """ Using External API that provides context to the LLM - Wikipedia """
     llm = ChatAnthropic(
         model = "claude-3-haiku-20240307",
-        temperature = 0.7
+        temperature = 0.7,
+        api_key = os.getenv("claudeAPI")
     )
 
     tools = load_tools(['wikipedia', "llm-math"], llm= llm)
